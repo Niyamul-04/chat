@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-export const SERVER_URL = (import.meta.env.VITE_SERVER_URL as string) || 'http://localhost:5000';
+export const SERVER_URL =
+  ((import.meta as any)?.env?.VITE_SERVER_URL as string) ||
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+    ? window.location.origin
+    : 'http://localhost:5000');
 export const API_BASE_URL = `${SERVER_URL}/api`;
 
 export const api = axios.create({

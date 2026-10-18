@@ -1,7 +1,10 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
+// Load from cwd, server directory, or workspace root
+dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 export const config = {
   port: parseInt(process.env.PORT || '5000', 10),
@@ -11,5 +14,5 @@ export const config = {
   turnUsername: process.env.TURN_USERNAME || '',
   turnCredential: process.env.TURN_CREDENTIAL || '',
   isProduction: process.env.NODE_ENV === 'production',
-  uploadDir: path.resolve(__dirname, '../uploads'),
+  uploadDir: process.env.UPLOAD_DIR || path.resolve(__dirname, '../uploads'),
 };

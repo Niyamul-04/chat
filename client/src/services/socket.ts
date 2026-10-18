@@ -10,6 +10,7 @@ export function getSocket(): Socket {
       autoConnect: false,
       withCredentials: true,
       auth: { token },
+      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
