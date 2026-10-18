@@ -73,10 +73,14 @@ export function setupSocketIO(io: SocketIOServer) {
     activeUserSockets.get(userId)!.add(socket.id);
 
     // Update online status in database
-    await prisma.user.update({
-      where: { id: userId },
-      data: { status: 'ONLINE', lastSeenAt: new Date() },
-    });
+    try {
+      await prisma.user.updateMany({
+        where: { id: userId },
+        data: { status: 'ONLINE', lastSeenAt: new Date() },
+      });
+    } catch (e) {
+      // safe ignore
+    }
 
     // Notify friends that this user is online
     const userFriendships = await prisma.friendship.findMany({
@@ -337,10 +341,14 @@ export function setupSocketIO(io: SocketIOServer) {
 
           // Update user status to OFFLINE
           const now = new Date();
-          await prisma.user.update({
-            where: { id: userId },
-            data: { status: 'OFFLINE', lastSeenAt: now },
-          }).catch(() => {});
+          try {
+            await prisma.user.updateMany({
+              where: { id: userId },
+              data: { status: 'OFFLINE', lastSeenAt: now },
+            });
+          } catch (e) {
+            // safe ignore
+          }
 
           // Notify friends
           userFriendships.forEach((f) => {
