@@ -36,6 +36,22 @@ export const MessageList: React.FC<MessageListProps> = ({
     bottomRef.current?.scrollIntoView();
   }, [friend.id]);
 
+  // Scroll to bottom when viewport resizes (e.g. virtual keyboard opens)
+  useEffect(() => {
+    const handleViewportResize = () => {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportResize);
+    }
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleViewportResize);
+      }
+    };
+  }, []);
+
   // Handle scroll to top to load more
   const handleScroll = () => {
     if (containerRef.current && containerRef.current.scrollTop === 0 && hasMore) {

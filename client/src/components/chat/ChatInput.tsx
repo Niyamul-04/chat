@@ -276,6 +276,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({ friendId, isDisabled = fal
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
+            onFocus={() => {
+              setTimeout(() => {
+                textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }, 150);
+            }}
             placeholder={
               isDisabled
                 ? 'Only accepted friends can chat or send files.'

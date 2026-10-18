@@ -137,7 +137,10 @@ export const ChatPage: React.FC = () => {
   }, [user]);
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex bg-slate-50 dark:bg-slate-950 font-sans">
+    <div
+      style={{ height: 'var(--app-height, 100dvh)' }}
+      className="h-full w-full max-h-[100dvh] overflow-hidden flex bg-slate-50 dark:bg-slate-950 font-sans"
+    >
       {/* Sidebar: Visible on desktop or when no active chat selected on mobile */}
       <div className={`h-full ${activeFriend ? 'hidden md:flex' : 'flex w-full md:w-auto'}`}>
         <Sidebar />

@@ -79,9 +79,15 @@ class WebRTCManager {
     pc.ontrack = (event) => {
       if (event.streams && event.streams[0]) {
         this.remoteStream = event.streams[0];
-        if (this.onRemoteStreamCallback) {
-          this.onRemoteStreamCallback(this.remoteStream);
+      } else if (event.track) {
+        if (!this.remoteStream) {
+          this.remoteStream = new MediaStream();
         }
+        this.remoteStream.addTrack(event.track);
+      }
+
+      if (this.remoteStream && this.onRemoteStreamCallback) {
+        this.onRemoteStreamCallback(this.remoteStream);
       }
     };
 

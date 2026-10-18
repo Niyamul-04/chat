@@ -28,6 +28,7 @@ export const ActiveCallModal: React.FC = () => {
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
 
   // Draggable PiP state
   const [pipPos, setPipPos] = useState({ x: 20, y: 20 });
@@ -41,10 +42,20 @@ export const ActiveCallModal: React.FC = () => {
     }
   }, [localStream, callState]);
 
-  // Attach remote stream
+  // Attach remote stream to video element (for video calls)
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream, callState]);
+
+  // Attach remote stream to audio element (crucial for audio calls so voice is heard)
+  useEffect(() => {
+    if (remoteAudioRef.current && remoteStream) {
+      remoteAudioRef.current.srcObject = remoteStream;
+      remoteAudioRef.current.play().catch((err) => {
+        console.warn('Audio auto-play error:', err);
+      });
     }
   }, [remoteStream, callState]);
 
@@ -95,6 +106,9 @@ export const ActiveCallModal: React.FC = () => {
       onMouseUp={handleMouseUp}
       className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-2xl flex flex-col justify-between p-6 select-none animate-fadeIn"
     >
+      {/* Hidden Audio element dedicated to playing remote audio stream for voice calls */}
+      <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
+
       {/* Top Header */}
       <div className="flex items-center justify-between text-white z-20">
         <div className="flex items-center space-x-3">
