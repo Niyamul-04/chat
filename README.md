@@ -1,177 +1,152 @@
-# ChatSphere 🌐 — Production Real-Time Chat & WebRTC Calling Web Application
+# ChatSphere
 
-ChatSphere is a modern, production-grade real-time chat and WebRTC audio/video calling application built with TypeScript, React, Express, Socket.IO, and SQLite with Prisma ORM.
-
----
-
-## ✨ Features
-
-- **Authentication**: User ID (unique username) + password, bcrypt hashing, JWT session, password strength meter.
-- **Strict Friends-Only Relations**:
-  - Search any user by their unique User ID.
-  - Send, accept, decline, and cancel friend requests with real-time badges.
-  - **Enforced Server-Side**: Non-friends cannot send messages, files, or call signals; inputs and call buttons are locked until accepted.
-  - Options to unfriend and block users.
-- **Real-Time Messaging**:
-  - Instant delivery with Socket.IO.
-  - Delivery indicators: Sent (✓), Delivered (✓✓), Seen (✓✓ cyan).
-  - Real-time typing indicators, online/offline presence, and last seen timestamps.
-  - Emoji picker, replies with quote previews, message deletion ("for me" and "for everyone").
-  - Infinite scroll / paginated message history.
-- **File & Media Sharing**:
-  - Image and file uploads (PDF, DOCX, ZIP, etc.) up to 10MB with Multer.
-  - Drag-and-drop file upload directly onto chat.
-  - Clipboard paste support (take a screenshot and press `Ctrl+V`).
-  - Full-screen Lightbox image viewer with zoom and direct download.
-- **Peer-to-Peer Audio & Video Calling (WebRTC)**:
-  - Audio and video call buttons in chat header.
-  - High-end incoming call modal with pulsing ring effect and procedural Web Audio API ringtone.
-  - In-call controls: Mute/Unmute microphone, Camera on/off, Call timer, End call.
-  - Draggable Picture-in-Picture (PiP) local video preview.
-  - Call history drawer with completed, missed, and rejected records.
-- **UI/UX & Design**:
-  - Glassmorphic aesthetic, dark mode / light mode toggle with localStorage persistence.
-  - Responsive design for mobile, tablet, laptop, and desktop.
-  - Built-in procedural sound effects (Web Audio API) for zero broken asset dependencies.
-  - Browser notifications for new messages.
+A fast, privacy-focused real-time messaging and peer-to-peer WebRTC voice/video calling web application built with TypeScript, React, Express, Socket.IO, and Prisma.
 
 ---
 
-## 🛠 Tech Stack
+## Overview
 
-- **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Zustand, Lucide React, Framer Motion.
-- **Backend**: Node.js, Express, Socket.IO, Prisma ORM, SQLite (`dev.db`).
-- **Media & RTC**: Multer local disk storage (abstracted for S3/Cloudinary), WebRTC native API with Google STUN + configurable TURN.
-- **Security**: Zod schema validation, Helmet security headers, CORS with credentials, express-rate-limit.
+ChatSphere was built to deliver a smooth, WhatsApp-like messaging experience without relying on bloated third-party SDKs. It pairs direct peer-to-peer WebRTC communication with strict server-side contact authorization: users can only exchange messages, attachments, or media calls once a mutual contact request has been sent and accepted.
 
----
-
-## 🚀 Quick Start (One-Command Run)
-
-### 1. Prerequisites
-- Node.js v18+ (Node v20 or v22 recommended)
-- npm v9+
-
-### 2. Install Dependencies
-Run the install command from the root directory:
-```bash
-npm run install:all
-```
-*(Or install in root, server, and client folders individually)*
-
-### 3. Database Setup & Demo Seed
-Initialize the SQLite database and seed demo users:
-```bash
-npm run seed
-```
-
-This creates 3 ready-to-test accounts (password for all is `Password123!`):
-- `alice` (Friends with `bob`, received request from `charlie`)
-- `bob` (Friends with `alice`)
-- `charlie` (Sent friend request to `alice`)
-
-### 4. Start Both Server & Client
-From the project root:
-```bash
-npm run dev
-```
-
-- **Frontend Client**: [http://localhost:5173](http://localhost:5173)
-- **Backend API & Sockets**: [http://localhost:5000](http://localhost:5000)
+Key design goals:
+- **Low-latency real-time sync**: Socket.IO handles live delivery receipts, typing states, and WebRTC SDP/ICE signaling.
+- **Privacy-first relations**: Server-enforced authorization blocks unsolicited messages, media, and call attempts.
+- **Lightweight footprint**: WebRTC transfers audio and video directly between peers, keeping server bandwidth minimal. Procedural audio (Web Audio API) generates ringtones and alerts without external asset dependencies.
+- **Mobile-first ergonomics**: Responsive layout featuring a bottom navigation bar on handheld screens and a split-pane workstation view on desktop.
 
 ---
 
-## 🧪 How to Test End-to-End
+## Tech Stack
 
-### Testing Real-Time Chat & Friendship:
-1. Open **Browser Window 1** (e.g. Chrome) and navigate to `http://localhost:5173`.
-   - Click "Alice" quick login button or sign in with ID `alice` / `Password123!`.
-2. Open **Browser Window 2** (e.g. Incognito window or Firefox) at `http://localhost:5173`.
-   - Click "Bob" quick login button or sign in with ID `bob` / `Password123!`.
-3. Notice Bob shows up as online with a green badge in Alice's chats list.
-4. Click on Bob in Alice's list:
-   - Type a message and see it appear instantly on Bob's screen.
-   - Watch the typing indicator live when Bob is typing.
-   - Observe message status change from `Sent` to `Seen`.
-   - Send an emoji or attach an image / document (or paste from clipboard).
-   - Click the image to view it full-screen in the Lightbox.
+### Client
+- **Framework**: React 18, Vite, TypeScript
+- **State Management**: Zustand
+- **Styling & Motion**: Tailwind CSS, Framer Motion, Lucide Icons
+- **Real-Time & Media**: Socket.IO Client, Native WebRTC API, Web Audio API
 
-### Testing Audio / Video Calls:
-1. In Alice's chat window with Bob, click either the **Phone (Audio)** or **Video camera** button in the header.
-2. Bob will immediately receive the incoming call modal with sound and ringing animation.
-3. Click **Accept** in Bob's window:
-   - Camera/mic permissions will be requested.
-   - The active call screen opens with the live call timer.
-   - In video mode, Bob and Alice see each other's stream, along with a draggable local picture-in-picture window.
-   - Test muting the microphone or disabling the camera.
-   - Click **End** to finish the call and view the record in the call history drawer.
-
-### Testing Friend Request Enforcement:
-1. Log in as `charlie`.
-2. Charlie is **not yet friends** with Alice (request is pending):
-   - Charlie cannot send messages or call Alice. The input displays: *"Only accepted friends can chat or send files."*
-3. Log in as `alice` and go to the **Requests** tab:
-   - Alice sees Charlie's request under Received requests with **Accept** and **Decline** buttons.
-   - Click **Accept**.
-   - Instantly, both Alice and Charlie's chat inputs unlock, and calling becomes available!
+### Server
+- **Runtime**: Node.js, Express, TypeScript
+- **WebSockets**: Socket.IO
+- **Database & ORM**: SQLite (development) / PostgreSQL (production) with Prisma ORM
+- **Authentication**: JWT (httpOnly cookies & Bearer tokens), bcryptjs password hashing
+- **Security & Storage**: Helmet, CORS, express-rate-limit, Multer (local disk storage with clean interface for S3/Cloudinary)
 
 ---
 
-## ⚙️ Environment Variables
+## Core Architecture & Features
 
-### Server (`server/.env`)
+### 1. Request-Gated Contact System
+- Every user registers with a unique User ID (`@username`).
+- Anyone can discover public profiles in the Explore directory and send a connection request.
+- The server validates friendships at both the database and socket layer: chat inputs, file uploads, and WebRTC call buttons remain disabled until the recipient accepts the request.
+- Full contact management: accept, decline, cancel pending requests, unfriend, or block users.
+
+### 2. Real-Time Messaging & Status Receipts
+- WhatsApp-style message delivery lifecycle:
+  - `✓` Sent (persisted in database)
+  - `✓✓` Delivered (received by recipient's client)
+  - `✓✓` Seen (read by recipient in active conversation)
+- Optimistic updates with client-side deduplication to eliminate race conditions and double messages.
+- Real-time typing indicators, online/offline presence tracking, and last seen timestamps.
+- Quote replies, emoji picker, and message deletion ("for me" or "for everyone").
+
+### 3. Peer-to-Peer Voice & Video Calls (WebRTC)
+- In-band WebRTC signaling over Socket.IO (`call_initiate`, `call_response`, `call_signal`, `call_end`).
+- Preconfigured with Google STUN servers; supports custom TURN relays for symmetric NAT and restrictive cellular networks.
+- In-call controls: mute microphone, toggle camera, call duration counter, and a draggable Picture-in-Picture (PiP) local stream.
+- Procedural ringtones, dial tones, and notification chimes generated in real time using the browser's Web Audio API.
+- Call history logging (completed, missed, and rejected records).
+
+### 4. File & Attachment Handling
+- Support for images and documents (PDF, DOCX, ZIP, etc.) up to 10MB.
+- Drag-and-drop file upload directly onto the chat viewport.
+- Clipboard paste support (`Ctrl+V`) for immediate screenshot sharing.
+- Built-in lightbox for full-screen image inspection and downloads.
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Node.js 18.x or higher (v20+ recommended)
+- npm 9.x or higher
+
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Niyamul-04/chat.git
+   cd chat
+   ```
+
+2. **Install all dependencies:**
+   ```bash
+   npm run install:all
+   ```
+
+3. **Initialize the database & seed demo accounts:**
+   ```bash
+   npm run seed
+   ```
+   This generates the SQLite database (`server/prisma/dev.db`) and seeds three test accounts (password for all: `Password123!`):
+   - `@alice`
+   - `@bob`
+   - `@charlie`
+
+4. **Start the development servers:**
+   ```bash
+   npm run dev
+   ```
+   - Frontend: `http://localhost:5173`
+   - Backend API & Sockets: `http://localhost:5000`
+
+---
+
+## Environment Variables
+
+### Server Configuration (`server/.env`)
+
 | Variable | Description | Default |
 | :--- | :--- | :--- |
-| `PORT` | Express server port | `5000` |
+| `PORT` | HTTP & WebSocket server port | `5000` |
 | `CLIENT_URL` | Allowed client origin for CORS | `http://localhost:5173` |
-| `JWT_SECRET` | Secret key used to sign JWTs | `chatsphere_super_secret_jwt_key_2026_dev_prod` |
-| `DATABASE_URL` | Prisma SQLite or PostgreSQL URL | `file:./dev.db` |
-| `TURN_URL` | Optional WebRTC TURN server URL | *(blank)* |
-| `TURN_USERNAME`| Optional TURN username | *(blank)* |
-| `TURN_CREDENTIAL`| Optional TURN credential | *(blank)* |
+| `JWT_SECRET` | Secret key used to sign session tokens | `chatsphere_jwt_secret_dev` |
+| `DATABASE_URL` | Prisma database connection string | `file:./dev.db` |
+| `TURN_URL` | *(Optional)* TURN server host for WebRTC | *(empty)* |
+| `TURN_USERNAME`| *(Optional)* TURN authentication username | *(empty)* |
+| `TURN_CREDENTIAL`| *(Optional)* TURN authentication credential | *(empty)* |
+
+### Client Configuration (`client/.env`)
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `VITE_SERVER_URL` | URL of the backend API and Socket.IO server | `http://localhost:5000` |
 
 ---
 
-## 📡 WebRTC & TURN Server Setup (Calls Across Networks)
+## Production Deployment
 
-WebRTC uses **STUN** servers (free Google STUN is preconfigured) to establish peer-to-peer connections when both peers have open or standard NAT.
-
-However, when users are on **symmetric NATs, 4G/5G mobile carriers, or corporate/campus firewalls**, direct P2P connections can fail. To guarantee 100% call reliability worldwide, configure a **TURN relay server**:
-
-1. Obtain a TURN server (free tier available at [Metered.ca](https://www.metered.ca/tools/openrelay/) or deploy `coturn` on a cloud VM).
-2. Add your TURN credentials to `server/.env`:
-```env
-TURN_URL=turn:standard.relay.metered.ca:80
-TURN_USERNAME=your-username-token
-TURN_CREDENTIAL=your-credential-key
-```
-3. The server will automatically deliver these credentials via `/api/calls/config` to clients upon connection.
-
----
-
-## 🌐 Production Deployment Guide
-
-### Deploying the Backend (e.g. Render / Railway / Fly.io)
-1. Set the build command:
+### Backend (Render, Railway, or VPS)
+1. Set the root directory to `server/`.
+2. Set build command:
    ```bash
-   npm run build
+   npm install && npm run build
    ```
-2. Set the start command:
+3. Set start command:
    ```bash
    npm run start
    ```
-3. Set environment variables (`DATABASE_URL`, `JWT_SECRET`, `CLIENT_URL`, `PORT`).
-   - For PostgreSQL: change `provider = "sqlite"` to `provider = "postgresql"` in `prisma/schema.prisma` and supply a standard Postgres connection string.
+4. Define production environment variables: `DATABASE_URL`, `JWT_SECRET`, and `CLIENT_URL` (pointing to your frontend domain).
+5. *(Optional)* Switch Prisma datasource to PostgreSQL in `server/prisma/schema.prisma` for production scaling.
 
-### Deploying the Frontend (e.g. Vercel / Netlify / Cloudflare Pages)
-1. In `client/src/services/api.ts`, update `SERVER_URL` to point to your live backend domain (or configure `VITE_API_URL` environment variable).
+### Frontend (Vercel, Netlify, or Cloudflare Pages)
+1. Set the root directory to `client/`.
 2. Set build command: `npm run build`
 3. Set output directory: `dist`
+4. Set environment variable: `VITE_SERVER_URL=https://your-backend-domain.com`
 
 ---
 
-## 🔒 Security Measures Included
-- **Server-Side Authorization**: Every single socket message emit, call offer, and API request queries friendship status on the server before dispatching.
-- **XSS & Injection Protection**: Parameterized Prisma queries prevent SQL injection, and inputs are sanitized.
-- **Strict File Upload Validation**: Multer rejects prohibited file types and enforces a 10MB maximum payload limit.
-- **Rate Limiting**: Protects authentication and general endpoints against brute-force attacks.
+## License
+
+This project is open-source and available under the [MIT License](LICENSE).
