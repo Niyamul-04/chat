@@ -1,0 +1,90 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  displayName  String
+  passwordHash String
+  avatarUrl    String?
+  bio          String?  @default("Hey there! I am using ChatSphere.")
+  status       String   @default("OFFLINE") // ONLINE, OFFLINE
+  lastSeenAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sentFriendRequests     FriendRequest[] @relation("SentRequests")
+  receivedFriendRequests FriendRequest[] @relation("ReceivedRequests")
+  friendships1           Friendship[]    @relation("User1Friendships")
+  friendships2           Friendship[]    @relation("User2Friendships")
+  sentMessages           Message[]       @relation("SentMessages")
+  receivedMessages       Message[]       @relation("ReceivedMessages")
+  callerCalls            CallRecord[]    @relation("CallerCalls")
+  receiverCalls          CallRecord[]    @relation("ReceiverCalls")
+}
+
+model FriendRequest {
+  id         String   @id @default(uuid())
+  senderId   String
+  sender     User     @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+  status     String   @default("PENDING") // PENDING, ACCEPTED, DECLINED, CANCELLED
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([senderId, receiverId])
+}
+
+model Friendship {
+  id          String   @id @default(uuid())
+  user1Id     String
+  user1       User     @relation("User1Friendships", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2Id     String
+  user2       User     @relation("User2Friendships", fields: [user2Id], references: [id], onDelete: Cascade)
+  status      String   @default("ACTIVE") // ACTIVE, BLOCKED
+  blockedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([user1Id, user2Id])
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  senderId   String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  content    String
+  type       String   @default("TEXT") // TEXT, IMAGE, FILE
+  fileUrl    String?
+  fileName   String?
+  fileSize   Int?
+  status     String   @default("SENT") // SENT, DELIVERED, SEEN
+  replyToId  String?
+  replyTo    Message? @relation("Replies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies    Message[] @relation("Replies")
+  isDeleted  Boolean  @default(false)
+  deletedFor String?  // comma-separated user IDs who deleted message "for me"
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model CallRecord {
+  id              String   @id @default(uuid())
+  callerId        String
+  caller          User     @relation("CallerCalls", fields: [callerId], references: [id], onDelete: Cascade)
+  receiverId      String
+  receiver        User     @relation("ReceiverCalls", fields: [receiverId], references: [id], onDelete: Cascade)
+  type            String   // AUDIO, VIDEO
+  status          String   // MISSED, REJECTED, COMPLETED, BUSY
+  durationSeconds Int      @default(0)
+  createdAt       DateTime @default(now())
+}
