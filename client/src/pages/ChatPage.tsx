@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Sidebar } from '../components/sidebar/Sidebar';
 import { ChatArea } from '../components/chat/ChatArea';
 import { Lightbox } from '../components/chat/Lightbox';
@@ -10,9 +10,11 @@ import { useCallStore } from '../store/callStore';
 import { getSocket, connectSocket } from '../services/socket';
 import { webrtc } from '../services/webrtc';
 import { sounds } from '../services/sounds';
+import { WifiOff, Loader2 } from 'lucide-react';
 
 export const ChatPage: React.FC = () => {
   const { user } = useAuthStore();
+  const [isSocketConnected, setIsSocketConnected] = useState(true);
   const {
     activeFriend,
     fetchFriends,
@@ -73,6 +75,11 @@ export const ChatPage: React.FC = () => {
     socket.off('call_ended');
     socket.off('call_busy');
     socket.off('call_offline');
+
+    // Connection Status Events
+    socket.on('connect', () => setIsSocketConnected(true));
+    socket.on('disconnect', () => setIsSocketConnected(false));
+    setIsSocketConnected(socket.connected);
 
     // Chat Events
     socket.on('new_message', (msg) => handleNewMessage(msg, user.id));
@@ -163,8 +170,16 @@ export const ChatPage: React.FC = () => {
   return (
     <div
       style={{ height: 'var(--app-height, 100dvh)' }}
-      className="h-full w-full max-h-[100dvh] overflow-hidden flex bg-slate-50 dark:bg-slate-950 font-sans"
+      className="h-full w-full max-h-[100dvh] overflow-hidden flex bg-slate-50 dark:bg-slate-950 font-sans relative"
     >
+      {/* Network / Connection Toast */}
+      {!isSocketConnected && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 px-4 py-1.5 rounded-full bg-slate-900/90 text-white border border-slate-700/80 shadow-2xl backdrop-blur-md flex items-center space-x-2 text-xs font-semibold animate-fadeIn">
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+          <span>Reconnecting to real-time chat...</span>
+        </div>
+      )}
+
       {/* Sidebar: Visible on desktop or when no active chat selected on mobile */}
       <div className={`h-full ${activeFriend ? 'hidden md:flex' : 'flex w-full md:w-auto'}`}>
         <Sidebar />

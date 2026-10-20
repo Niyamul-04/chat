@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { Avatar } from '../common/Avatar';
 import { api } from '../../services/api';
-import { Camera, Save, Lock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Camera, Save, Lock, CheckCircle, AlertCircle, Loader2, Copy, Check } from 'lucide-react';
 
 export const UserProfile: React.FC = () => {
   const { user, updateProfile } = useAuthStore();
@@ -13,6 +13,14 @@ export const UserProfile: React.FC = () => {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [profileMsg, setProfileMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [copiedId, setCopiedId] = useState(false);
+
+  const handleCopyUserId = () => {
+    if (!user?.username) return;
+    navigator.clipboard.writeText(user.username);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2500);
+  };
 
   // Password state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -127,9 +135,26 @@ export const UserProfile: React.FC = () => {
         <h3 className="mt-3 text-lg font-bold text-slate-900 dark:text-slate-100">
           {user?.displayName}
         </h3>
-        <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-          @{user?.username}
-        </p>
+        <div className="mt-1.5 flex flex-col items-center">
+          <button
+            type="button"
+            onClick={handleCopyUserId}
+            className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-xs font-bold text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60 transition active:scale-95 shadow-xs"
+            title="Click to copy your unique User ID to clipboard"
+          >
+            <span>@{user?.username}</span>
+            {copiedId ? (
+              <Check className="w-3.5 h-3.5 text-emerald-500 animate-bounce" />
+            ) : (
+              <Copy className="w-3.5 h-3.5" />
+            )}
+          </button>
+          {copiedId && (
+            <span className="text-[11px] text-emerald-500 font-semibold mt-1 animate-fadeIn">
+              User ID copied to clipboard! Share with friends
+            </span>
+          )}
+        </div>
       </div>
 
       {profileMsg && (

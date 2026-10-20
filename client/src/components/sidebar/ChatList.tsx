@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useAuthStore } from '../../store/authStore';
 import { useChatStore } from '../../store/chatStore';
 import { Avatar } from '../common/Avatar';
-import { Search, Image as ImageIcon, FileText, MessageSquarePlus } from 'lucide-react';
+import { Search, Image as ImageIcon, FileText, MessageSquarePlus, Check, CheckCheck, X } from 'lucide-react';
 import { User } from '../../types';
 
 export const ChatList: React.FC = () => {
+  const { user } = useAuthStore();
   const { friends, activeFriend, setActiveFriend, onlineUserIds, setActiveTab } = useChatStore();
   const [filterQuery, setFilterQuery] = useState('');
 
@@ -39,29 +41,51 @@ export const ChatList: React.FC = () => {
             placeholder="Search conversations..."
             value={filterQuery}
             onChange={(e) => setFilterQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-transparent focus:border-indigo-500/30 focus:bg-white dark:focus:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none transition"
+            className="w-full pl-9 pr-8 py-2 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-transparent focus:border-indigo-500/30 focus:bg-white dark:focus:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none transition"
           />
+          {filterQuery && (
+            <button
+              onClick={() => setFilterQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Conversations List */}
       <div className="flex-1 overflow-y-auto px-2 space-y-1">
         {filteredFriends.length === 0 ? (
-          <div className="text-center py-12 px-4">
-            <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-500 mb-3">
-              <MessageSquarePlus className="w-6 h-6" />
+          filterQuery ? (
+            <div className="text-center py-12 px-4">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                No chats match "{filterQuery}"
+              </p>
+              <button
+                onClick={() => setFilterQuery('')}
+                className="mt-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                Clear search
+              </button>
             </div>
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">No chats yet</p>
-            <p className="text-xs text-slate-400 mt-1 mb-4">
-              Connect with friends to start chatting and calling in real-time.
-            </p>
-            <button
-              onClick={() => setActiveTab('search')}
-              className="py-2 px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-500/20 transition"
-            >
-              Find Users by ID
-            </button>
-          </div>
+          ) : (
+            <div className="text-center py-12 px-4">
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-500 mb-3">
+                <MessageSquarePlus className="w-6 h-6" />
+              </div>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">No chats yet</p>
+              <p className="text-xs text-slate-400 mt-1 mb-4">
+                Connect with friends to start chatting and calling in real-time.
+              </p>
+              <button
+                onClick={() => setActiveTab('search')}
+                className="py-2 px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-500/20 transition"
+              >
+                Find Users by ID
+              </button>
+            </div>
+          )
         ) : (
           filteredFriends.map(({ friend, lastMessage, unreadCount }) => {
             const isSelected = activeFriend?.id === friend.id;
@@ -97,6 +121,15 @@ export const ChatList: React.FC = () => {
 
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-slate-500 dark:text-slate-400 truncate flex items-center space-x-1">
+                      {lastMessage && lastMessage.senderId === user?.id && (
+                        <span className="flex-shrink-0 mr-0.5 inline-flex items-center">
+                          {lastMessage.status === 'SEEN' ? (
+                            <CheckCheck className="w-3.5 h-3.5 text-sky-500" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5 text-slate-400" />
+                          )}
+                        </span>
+                      )}
                       {lastMessage?.type === 'IMAGE' && (
                         <>
                           <ImageIcon className="w-3.5 h-3.5 text-indigo-500 mr-1 flex-shrink-0" />
@@ -110,7 +143,7 @@ export const ChatList: React.FC = () => {
                         </>
                       )}
                       {(!lastMessage?.type || lastMessage?.type === 'TEXT') && (
-                        <span>{lastMessage?.content || `@${friend.username}`}</span>
+                        <span className="truncate">{lastMessage?.content || `@${friend.username}`}</span>
                       )}
                     </p>
 

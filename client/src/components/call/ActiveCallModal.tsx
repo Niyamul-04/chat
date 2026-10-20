@@ -60,7 +60,7 @@ export const ActiveCallModal: React.FC = () => {
       remoteAudioRef.current.muted = false;
       remoteAudioRef.current.volume = 1.0;
       remoteAudioRef.current.play().catch((err) => {
-        console.warn('Audio auto-play error:', err);
+        console.warn('Audio auto-play error, waiting for user gesture:', err);
       });
     }
 
@@ -68,10 +68,18 @@ export const ActiveCallModal: React.FC = () => {
       remoteAudioVideoRef.current.srcObject = remoteStream;
       remoteAudioVideoRef.current.muted = false;
       remoteAudioVideoRef.current.volume = 1.0;
-      remoteAudioVideoRef.current.play().catch((err) => {
-        console.warn('Backup audio video playback error:', err);
-      });
+      remoteAudioVideoRef.current.play().catch(() => {});
     }
+
+    // Auto-unlock audio playback on first user gesture if browser autoplay blocked it
+    const unlockAudio = () => {
+      remoteAudioRef.current?.play().catch(() => {});
+      remoteAudioVideoRef.current?.play().catch(() => {});
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
+    window.addEventListener('click', unlockAudio, { once: true });
+    window.addEventListener('touchstart', unlockAudio, { once: true });
   }, [remoteStream, callState, callType]);
 
   if ((callState !== 'OUTGOING' && callState !== 'CONNECTED') || !targetUser) {

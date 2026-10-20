@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useChatStore } from '../../store/chatStore';
 import { X, Download, ZoomIn, ZoomOut, Trash2 } from 'lucide-react';
 import { getMediaUrl } from '../../services/api';
@@ -7,6 +7,14 @@ export const Lightbox: React.FC = () => {
   const { lightboxMedia, setLightboxMedia, deleteMessage } = useChatStore();
   const [zoom, setZoom] = useState(1);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxMedia(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setLightboxMedia]);
 
   if (!lightboxMedia) return null;
 

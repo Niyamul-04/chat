@@ -1,8 +1,8 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Message, User } from '../../types';
 import { MessageBubble } from './MessageBubble';
 import { useChatStore } from '../../store/chatStore';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronDown } from 'lucide-react';
 
 interface MessageListProps {
   friend: User;
@@ -22,24 +22,50 @@ export const MessageList: React.FC<MessageListProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevMessagesLength = useRef(messages.length);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [hasNewUnseen, setHasNewUnseen] = useState(false);
+
+  const scrollToBottom = (smooth = true) => {
+    bottomRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+    setShowScrollBottom(false);
+    setHasNewUnseen(false);
+  };
 
   // Auto-scroll on new message received
   useEffect(() => {
+    const container = containerRef.current;
     if (messages.length > prevMessagesLength.current) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      if (container) {
+        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 160;
+        if (isNearBottom) {
+          scrollToBottom(true);
+        } else {
+          setShowScrollBottom(true);
+          setHasNewUnseen(true);
+        }
+      } else {
+        scrollToBottom(true);
+      }
     }
     prevMessagesLength.current = messages.length;
   }, [messages.length]);
 
-  // Initial scroll to bottom
+  // Initial instant scroll to bottom on friend change
   useEffect(() => {
-    bottomRef.current?.scrollIntoView();
+    scrollToBottom(false);
+    prevMessagesLength.current = messages.length;
   }, [friend.id]);
 
-  // Scroll to bottom when viewport resizes (e.g. virtual keyboard opens)
+  // Scroll to bottom when viewport resizes (e.g. mobile virtual keyboard opens)
   useEffect(() => {
     const handleViewportResize = () => {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      const container = containerRef.current;
+      if (container) {
+        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 250;
+        if (isNearBottom) {
+          scrollToBottom(true);
+        }
+      }
     };
 
     if (window.visualViewport) {
@@ -52,10 +78,21 @@ export const MessageList: React.FC<MessageListProps> = ({
     };
   }, []);
 
-  // Handle scroll to top to load more
+  // Handle scroll events: load more on top, show/hide scroll button
   const handleScroll = () => {
-    if (containerRef.current && containerRef.current.scrollTop === 0 && hasMore) {
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (container.scrollTop === 0 && hasMore) {
       onLoadMore();
+    }
+
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (distanceFromBottom > 160) {
+      setShowScrollBottom(true);
+    } else {
+      setShowScrollBottom(false);
+      setHasNewUnseen(false);
     }
   };
 
@@ -133,6 +170,23 @@ export const MessageList: React.FC<MessageListProps> = ({
       )}
 
       <div ref={bottomRef} />
+
+      {/* Floating Scroll to Bottom Button */}
+      {showScrollBottom && (
+        <button
+          type="button"
+          onClick={() => scrollToBottom(true)}
+          className="fixed bottom-20 right-6 z-30 p-2.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl shadow-indigo-600/30 border border-white/20 transition-all duration-200 active:scale-95 animate-fadeIn flex items-center space-x-1.5"
+          title="Scroll to latest messages"
+        >
+          {hasNewUnseen && (
+            <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-rose-500 text-white animate-pulse">
+              New
+            </span>
+          )}
+          <ChevronDown className="w-4 h-4" />
+        </button>
+      )}
     </div>
   );
 };

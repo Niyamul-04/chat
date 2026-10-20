@@ -43,6 +43,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({ friendId, isDisabled = fal
     }
   }, [friendId, isDisabled]);
 
+  // Auto-resize textarea height as user types
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 128)}px`;
+    }
+  }, [text]);
+
   // Handle typing debounce
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
