@@ -7,7 +7,7 @@ import { ActiveCallModal } from '../components/call/ActiveCallModal';
 import { useAuthStore } from '../store/authStore';
 import { useChatStore } from '../store/chatStore';
 import { useCallStore } from '../store/callStore';
-import { getSocket } from '../services/socket';
+import { getSocket, connectSocket } from '../services/socket';
 import { webrtc } from '../services/webrtc';
 import { sounds } from '../services/sounds';
 
@@ -50,7 +50,7 @@ export const ChatPage: React.FC = () => {
 
   // Setup Socket.IO Event Listeners
   useEffect(() => {
-    const socket = getSocket();
+    const socket = connectSocket();
     if (!socket || !user) return;
 
     // Chat Events

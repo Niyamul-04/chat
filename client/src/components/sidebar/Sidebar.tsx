@@ -116,6 +116,12 @@ export const Sidebar: React.FC = () => {
         {activeTab === 'profile' && <UserProfile />}
       </div>
 
+      {/* Desktop Footer Developer Attribution */}
+      <div className="hidden md:flex items-center justify-between px-3.5 py-1.5 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50 text-[10.5px] text-slate-400">
+        <span className="font-medium text-slate-500 dark:text-slate-400">ChatSphere v2.0</span>
+        <span>Dev: <strong className="font-semibold text-indigo-600 dark:text-indigo-400">Niyamul Hasan</strong></span>
+      </div>
+
       {/* Mobile Bottom Tab Bar (Android & iOS Ergonomic Bottom Nav) */}
       <nav className="md:hidden flex items-center justify-around py-2 px-2 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl z-20 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-lg">
         {tabs.map((tab) => {

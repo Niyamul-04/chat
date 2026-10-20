@@ -258,6 +258,22 @@ export const UserProfile: React.FC = () => {
           </button>
         </form>
       </div>
+
+      {/* Developer Attribution Card */}
+      <div className="p-4 rounded-2xl bg-gradient-to-tr from-indigo-50/80 to-purple-50/80 dark:from-slate-800/80 dark:to-indigo-950/40 border border-indigo-100 dark:border-indigo-900/40 text-center space-y-2 select-none shadow-xs">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+          ChatSphere v2.0
+        </div>
+        <p className="text-xs text-slate-600 dark:text-slate-300">
+          Crafted & Developed with ❤️ by
+        </p>
+        <div className="inline-flex items-center space-x-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold shadow-md shadow-indigo-500/25">
+          <span>Niyamul Hasan</span>
+        </div>
+        <p className="text-[10.5px] text-slate-400 dark:text-slate-500 pt-0.5">
+          Real-time messaging, WebRTC calling & file sharing
+        </p>
+      </div>
     </div>
   );
 };

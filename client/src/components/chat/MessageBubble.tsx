@@ -18,7 +18,7 @@ interface MessageBubbleProps {
   message: Message;
 }
 
-export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
+export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message }) => {
   const { user } = useAuthStore();
   const { setReplyingToMessage, deleteMessage, setLightboxMedia } = useChatStore();
   const [showMenu, setShowMenu] = useState(false);
@@ -216,4 +216,4 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
       </div>
     </div>
   );
-};
+});

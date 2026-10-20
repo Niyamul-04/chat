@@ -82,16 +82,29 @@ export const ChatArea: React.FC = () => {
 
   if (!activeFriend) {
     return (
-      <main className="flex-1 hidden md:flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 dark:bg-slate-950/50">
+      <main className="flex-1 hidden md:flex flex-col items-center justify-center p-8 text-center bg-slate-50/50 dark:bg-slate-950/50 select-none">
         <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-6 shadow-xl border border-indigo-500/20 animate-pulse">
           <Sparkles className="w-10 h-10" />
         </div>
-        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
+        <h2 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
           Welcome to ChatSphere
         </h2>
         <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mt-2">
           Select a conversation from the sidebar or search for users by User ID to start chatting and calling.
         </p>
+
+        {/* Developer Attribution Badge */}
+        <div className="mt-8 p-3 px-5 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 shadow-md backdrop-blur-md flex flex-col items-center space-y-1">
+          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+            Developed & Engineered by
+          </span>
+          <span className="text-base font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            Niyamul Hasan
+          </span>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+            Real-Time Socket.IO • WebRTC Voice & Video • Instant Delivery
+          </span>
+        </div>
       </main>
     );
   }

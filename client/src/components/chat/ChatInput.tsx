@@ -57,30 +57,29 @@ export const ChatInput: React.FC<ChatInputProps> = ({ friendId, isDisabled = fal
     }, 2000);
   };
 
-  const handleSend = async () => {
-    if (isSending || isDisabled) return;
+  const handleSend = () => {
+    if (isDisabled) return;
     const contentToSend = text.trim();
     if (!contentToSend && !isUploading) return;
 
-    setIsSending(true);
+    // Immediately clear input and reset typing
     setText('');
     emitTyping(friendId, false);
-
-    try {
-      await sendMessage({
-        receiverId: friendId,
-        content: contentToSend,
-        type: 'TEXT',
-      });
-    } catch (err: any) {
-      console.error('Send message error:', err);
-      // Restore text if failed
-      setText(contentToSend);
-    } finally {
-      setIsSending(false);
-      // Refocus textarea after sending
-      setTimeout(() => textareaRef.current?.focus(), 10);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
     }
+    textareaRef.current?.focus();
+
+    // Fire non-blocking asynchronous send
+    sendMessage({
+      receiverId: friendId,
+      content: contentToSend,
+      type: 'TEXT',
+    }).catch((err: any) => {
+      console.error('Send message error:', err);
+      // Restore text if send truly failed and input is empty
+      setText((curr) => curr || contentToSend);
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

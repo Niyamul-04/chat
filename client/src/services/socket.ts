@@ -7,14 +7,20 @@ export function getSocket(): Socket {
   if (!socket) {
     const token = localStorage.getItem('chatsphere_token');
     socket = io(SERVER_URL, {
-      autoConnect: false,
+      autoConnect: true,
       withCredentials: true,
       auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: 20,
+      reconnectionDelay: 500,
     });
+  } else if (!socket.connected) {
+    const token = localStorage.getItem('chatsphere_token');
+    if (token) {
+      socket.auth = { token };
+    }
+    socket.connect();
   }
   return socket;
 }

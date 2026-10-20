@@ -185,8 +185,18 @@ router.post('/send', authMiddleware, async (req: AuthRequest, res): Promise<void
       },
     });
 
-    // Update friendship's updatedAt to sort recent chats
-    await prisma.friendship.updateMany({
+    const io = getIO(res);
+    if (io) {
+      // Instant socket broadcast
+      io.to(`user:${receiverId}`).emit('new_message', newMessage);
+      io.to(`user:${currentUserId}`).emit('message_sent', newMessage);
+    }
+
+    // Immediate HTTP response (client does not wait for friendship table update)
+    res.status(201).json({ message: newMessage });
+
+    // Update friendship's updatedAt asynchronously in background
+    prisma.friendship.updateMany({
       where: {
         OR: [
           { user1Id: currentUserId, user2Id: receiverId },
@@ -194,16 +204,9 @@ router.post('/send', authMiddleware, async (req: AuthRequest, res): Promise<void
         ],
       },
       data: { updatedAt: new Date() },
+    }).catch((err) => {
+      console.error('Error updating friendship timestamp:', err);
     });
-
-    const io = getIO(res);
-    if (io) {
-      // Send to receiver room and sender room
-      io.to(`user:${receiverId}`).emit('new_message', newMessage);
-      io.to(`user:${currentUserId}`).emit('message_sent', newMessage);
-    }
-
-    res.status(201).json({ message: newMessage });
   } catch (error) {
     console.error('Send message error:', error);
     res.status(500).json({ error: 'Failed to send message' });

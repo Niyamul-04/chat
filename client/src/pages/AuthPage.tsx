@@ -15,13 +15,18 @@ export const AuthPage: React.FC = () => {
 
       {/* Top Bar with Brand & Theme Toggle */}
       <header className="absolute top-6 left-6 right-6 flex items-center justify-between max-w-6xl mx-auto">
-        <div className="flex items-center space-x-2.5">
+        <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25">
             <MessageSquare className="w-5 h-5" />
           </div>
-          <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-            ChatSphere
-          </span>
+          <div>
+            <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent block leading-tight">
+              ChatSphere
+            </span>
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+              by <strong className="text-indigo-600 dark:text-indigo-400">Niyamul Hasan</strong>
+            </span>
+          </div>
         </div>
 
         <ThemeToggle />
@@ -76,8 +81,8 @@ export const AuthPage: React.FC = () => {
           )}
         </div>
 
-        {/* Feature Badges Footer */}
-        <div className="mt-8 flex items-center justify-center space-x-6 text-slate-400 text-xs">
+        {/* Feature Badges */}
+        <div className="mt-6 flex items-center justify-center space-x-6 text-slate-400 text-xs">
           <div className="flex items-center space-x-1.5">
             <Zap className="w-4 h-4 text-indigo-500" />
             <span>Real-time</span>
@@ -89,6 +94,14 @@ export const AuthPage: React.FC = () => {
           <div className="flex items-center space-x-1.5">
             <Sparkles className="w-4 h-4 text-purple-500" />
             <span>Friends-Only</span>
+          </div>
+        </div>
+
+        {/* Developer Attribution Card */}
+        <div className="mt-5 text-center">
+          <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-white/70 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 shadow-sm text-xs text-slate-600 dark:text-slate-400 backdrop-blur-md">
+            <span>Designed & Developed by</span>
+            <span className="font-extrabold text-indigo-600 dark:text-indigo-400 tracking-tight">Niyamul Hasan</span>
           </div>
         </div>
       </div>

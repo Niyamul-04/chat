@@ -152,8 +152,15 @@ export function setupSocketIO(io: SocketIOServer) {
           },
         });
 
-        // Update friendship updated time
-        await prisma.friendship.updateMany({
+        // 1. Instant socket emission to receiver and sender (zero network lag!)
+        io.to(`user:${receiverId}`).emit('new_message', newMessage);
+        io.to(`user:${userId}`).emit('message_sent', newMessage);
+
+        // 2. Immediate client callback acknowledgment
+        if (callback) callback({ success: true, message: newMessage });
+
+        // 3. Update friendship's updatedAt asynchronously in background
+        prisma.friendship.updateMany({
           where: {
             OR: [
               { user1Id: userId, user2Id: receiverId },
@@ -161,13 +168,9 @@ export function setupSocketIO(io: SocketIOServer) {
             ],
           },
           data: { updatedAt: new Date() },
+        }).catch((err) => {
+          console.error('Error updating friendship timestamp:', err);
         });
-
-        // Emit to receiver and sender's other tabs
-        io.to(`user:${receiverId}`).emit('new_message', newMessage);
-        io.to(`user:${userId}`).emit('message_sent', newMessage);
-
-        if (callback) callback({ success: true, message: newMessage });
       } catch (err: any) {
         console.error('Socket send_message error:', err);
         if (callback) callback({ error: 'Failed to send message.' });

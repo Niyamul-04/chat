@@ -213,7 +213,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Try fast WebSocket emission with ack if connected
       if (socket && socket.connected) {
         confirmedMessage = await new Promise<Message | null>((resolve) => {
-          const timeout = setTimeout(() => resolve(null), 2500);
+          const timeout = setTimeout(() => resolve(null), 1200);
           socket.emit(
             'send_message',
             { receiverId, content, type, fileUrl, fileName, fileSize, replyToId },
@@ -247,6 +247,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const finalMsg = confirmedMessage;
         set((state) => {
           const existing = state.messages[receiverId] || [];
+          const hasFinal = existing.some((m) => m.id === finalMsg.id);
+          const hasTemp = existing.some((m) => m.id === tempId);
+          if (hasFinal && hasTemp) {
+            return {
+              messages: {
+                ...state.messages,
+                [receiverId]: existing.filter((m) => m.id !== tempId),
+              },
+            };
+          }
           return {
             messages: {
               ...state.messages,
@@ -429,15 +439,45 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const otherUserId = msg.receiverId;
     set((state) => {
       const existing = state.messages[otherUserId] || [];
-      // avoid duplicates if already appended
+      // If already present by confirmed ID, no change
       if (existing.some((m) => m.id === msg.id)) {
         return state;
       }
+
+      // Reconcile matching optimistic temp message if present
+      const tempIndex = existing.findIndex(
+        (m) => m.id.startsWith('temp-') && m.content === msg.content && m.type === msg.type
+      );
+      let updatedMessages: Message[];
+      if (tempIndex !== -1) {
+        updatedMessages = [...existing];
+        updatedMessages[tempIndex] = msg;
+      } else {
+        updatedMessages = [...existing, msg];
+      }
+
+      const updatedFriends = state.friends.map((f) => {
+        if (f.friend.id === otherUserId) {
+          return {
+            ...f,
+            lastMessage: {
+              id: msg.id,
+              content: msg.content,
+              type: msg.type,
+              createdAt: msg.createdAt,
+              senderId: msg.senderId,
+              status: msg.status,
+            },
+          };
+        }
+        return f;
+      });
+
       return {
-        messages: { ...state.messages, [otherUserId]: [...existing, msg] },
+        messages: { ...state.messages, [otherUserId]: updatedMessages },
+        friends: updatedFriends,
       };
     });
-    get().fetchFriends();
   },
 
   handleUserStatusChange: (userId: string, status: 'ONLINE' | 'OFFLINE') => {
