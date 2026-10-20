@@ -11,7 +11,7 @@ interface AuthState {
   error: string | null;
   login: (username: string, password: string) => Promise<boolean>;
   signup: (username: string, displayName: string, password: string, email?: string) => Promise<boolean>;
-  googleLogin: (payload: { email: string; displayName?: string; googleId?: string; avatarUrl?: string; credential?: string }) => Promise<boolean>;
+  googleLogin: (payload: { email: string; displayName?: string; googleId?: string; avatarUrl?: string; credential?: string; password?: string }) => Promise<boolean>;
   forgotPassword: (identifier: string) => Promise<{ success: boolean; message: string; resetCode?: string }>;
   resetPassword: (identifier: string, resetCode: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;

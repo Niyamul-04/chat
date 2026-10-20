@@ -35,6 +35,7 @@ const googleAuthSchema = z.object({
   googleId: z.string().optional(),
   avatarUrl: z.string().optional(),
   credential: z.string().optional(),
+  password: z.string().optional(),
 });
 
 const forgotPasswordSchema = z.object({
@@ -196,7 +197,7 @@ router.post('/google', authLimiter, async (req, res): Promise<void> => {
       return;
     }
 
-    let { email, displayName, googleId, avatarUrl, credential } = parseResult.data;
+    let { email, displayName, googleId, avatarUrl, credential, password } = parseResult.data;
 
     // If client sent Google One Tap / GSI JWT credential, decode it
     if (credential && !email) {
@@ -233,6 +234,15 @@ router.post('/google', authLimiter, async (req, res): Promise<void> => {
     });
 
     if (user) {
+      // If existing user passed a password, verify it
+      if (password && user.passwordHash) {
+        const isMatch = await bcrypt.compare(password, user.passwordHash);
+        if (!isMatch) {
+          res.status(401).json({ error: 'Incorrect password for this account.' });
+          return;
+        }
+      }
+
       // Existing user: update googleId or avatar if missing
       const updateData: any = { status: 'ONLINE', lastSeenAt: new Date() };
       if (!user.googleId && googleId) updateData.googleId = googleId;
@@ -244,7 +254,16 @@ router.post('/google', authLimiter, async (req, res): Promise<void> => {
         data: updateData,
       });
     } else {
-      // New user: derive a valid, unique username from email
+      // New user: Google sign up strictly REQUIRES a password!
+      if (!password || password.trim().length < 6) {
+        res.status(400).json({
+          error: 'Please set a secure password (at least 6 characters) to complete Google sign up.',
+          isNewUser: true,
+        });
+        return;
+      }
+
+      // Derive a valid, unique username from email
       const baseUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_.-]/g, '').slice(0, 20) || 'user';
       let candidateUsername = baseUsername;
       let counter = 1;
@@ -253,8 +272,7 @@ router.post('/google', authLimiter, async (req, res): Promise<void> => {
         candidateUsername = `${baseUsername.slice(0, 15)}_${counter++}`;
       }
 
-      const randomPassword = (await bcrypt.genSalt(10)) + Math.random().toString(36);
-      const passwordHash = await bcrypt.hash(randomPassword, 10);
+      const passwordHash = await bcrypt.hash(password.trim(), 10);
       const userAvatar = avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${candidateUsername}`;
 
       user = await prisma.user.create({

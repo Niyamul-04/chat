@@ -53,6 +53,27 @@ export const ChatPage: React.FC = () => {
     const socket = connectSocket();
     if (!socket || !user) return;
 
+    // Purge any lingering listeners to guarantee exactly 1 listener per event
+    socket.off('new_message');
+    socket.off('message_sent');
+    socket.off('user_status_changed');
+    socket.off('initial_online_friends');
+    socket.off('user_typing');
+    socket.off('messages_seen');
+    socket.off('message_deleted');
+    socket.off('message_deleted_for_me');
+    socket.off('friend_request_received');
+    socket.off('friend_request_accepted');
+    socket.off('friend_request_cancelled');
+    socket.off('unfriended');
+    socket.off('incoming_call');
+    socket.off('call_accepted');
+    socket.off('call_rejected');
+    socket.off('call_signal');
+    socket.off('call_ended');
+    socket.off('call_busy');
+    socket.off('call_offline');
+
     // Chat Events
     socket.on('new_message', (msg) => handleNewMessage(msg, user.id));
     socket.on('message_sent', handleMessageSent);

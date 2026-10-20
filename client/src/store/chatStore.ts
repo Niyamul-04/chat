@@ -61,6 +61,38 @@ interface ChatState {
   handleFriendRequestAccepted: (friend: User) => void;
 }
 
+function reconcileMessageList(existing: Message[], incoming: Message, targetTempId?: string): Message[] {
+  // 1. If incoming message is already in existing by actual ID, update it and purge any matching temp message
+  if (existing.some((m) => m.id === incoming.id)) {
+    return existing
+      .filter((m) => {
+        if (targetTempId && m.id === targetTempId) return false;
+        if (incoming.tempId && m.id === incoming.tempId) return false;
+        return true;
+      })
+      .map((m) => (m.id === incoming.id ? incoming : m));
+  }
+
+  // 2. If targetTempId or incoming.tempId matches an optimistic message, replace it directly
+  const tempToReplace = targetTempId || incoming.tempId;
+  if (tempToReplace && existing.some((m) => m.id === tempToReplace)) {
+    return existing.map((m) => (m.id === tempToReplace ? incoming : m));
+  }
+
+  // 3. Fallback: match any pending optimistic temp- message with the same sender and content
+  const tempIndex = existing.findIndex(
+    (m) => m.id.startsWith('temp-') && m.senderId === incoming.senderId && m.content === incoming.content
+  );
+  if (tempIndex !== -1) {
+    const updated = [...existing];
+    updated[tempIndex] = incoming;
+    return updated;
+  }
+
+  // 4. Otherwise append
+  return [...existing, incoming];
+}
+
 export const useChatStore = create<ChatState>((set, get) => ({
   friends: [],
   activeFriend: null,
@@ -216,7 +248,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           const timeout = setTimeout(() => resolve(null), 1200);
           socket.emit(
             'send_message',
-            { receiverId, content, type, fileUrl, fileName, fileSize, replyToId },
+            { receiverId, content, type, fileUrl, fileName, fileSize, replyToId, tempId },
             (response: any) => {
               clearTimeout(timeout);
               if (response?.success && response?.message) {
@@ -239,6 +271,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           fileName,
           fileSize,
           replyToId,
+          tempId,
         });
         confirmedMessage = res.data.message;
       }
@@ -247,20 +280,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const finalMsg = confirmedMessage;
         set((state) => {
           const existing = state.messages[receiverId] || [];
-          const hasFinal = existing.some((m) => m.id === finalMsg.id);
-          const hasTemp = existing.some((m) => m.id === tempId);
-          if (hasFinal && hasTemp) {
-            return {
-              messages: {
-                ...state.messages,
-                [receiverId]: existing.filter((m) => m.id !== tempId),
-              },
-            };
-          }
+          const updatedMessages = reconcileMessageList(existing, finalMsg, tempId);
           return {
             messages: {
               ...state.messages,
-              [receiverId]: existing.map((m) => (m.id === tempId ? finalMsg : m)),
+              [receiverId]: updatedMessages,
             },
           };
         });
@@ -400,11 +424,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     set((state) => {
       const existing = state.messages[otherUserId] || [];
-      // Strict deduplication: Don't append if already in state
-      if (existing.some((m) => m.id === msg.id)) {
-        return state;
-      }
-      const updatedMessages = [...existing, msg];
+      const updatedMessages = reconcileMessageList(existing, msg, msg.tempId);
 
       const updatedFriends = state.friends.map((f) => {
         if (f.friend.id === otherUserId) {
@@ -439,22 +459,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const otherUserId = msg.receiverId;
     set((state) => {
       const existing = state.messages[otherUserId] || [];
-      // If already present by confirmed ID, no change
-      if (existing.some((m) => m.id === msg.id)) {
-        return state;
-      }
-
-      // Reconcile matching optimistic temp message if present
-      const tempIndex = existing.findIndex(
-        (m) => m.id.startsWith('temp-') && m.content === msg.content && m.type === msg.type
-      );
-      let updatedMessages: Message[];
-      if (tempIndex !== -1) {
-        updatedMessages = [...existing];
-        updatedMessages[tempIndex] = msg;
-      } else {
-        updatedMessages = [...existing, msg];
-      }
+      const updatedMessages = reconcileMessageList(existing, msg, msg.tempId);
 
       const updatedFriends = state.friends.map((f) => {
         if (f.friend.id === otherUserId) {

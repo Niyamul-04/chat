@@ -50,10 +50,11 @@ async function runIntegrationTests() {
         receiverId: bobLogin.data.user.id,
         content: 'Automated test message from Alice to Bob 🚀',
         type: 'TEXT',
+        tempId: 'temp-test-12345',
       },
       headers: { Authorization: `Bearer ${aliceToken}` },
     });
-    console.log('✅ 5. Real-Time Message Sent successfully. ID:', msgRes.data.message.id);
+    console.log('✅ 5. Real-Time Message Sent successfully. ID:', msgRes.data.message.id, '| tempId returned:', msgRes.data.message.tempId);
 
     // 6. Bob reads message history with Alice
     const bobMessages = await req(`${API_URL}/messages/${aliceLogin.data.user.id}`, {
@@ -120,18 +121,30 @@ async function runIntegrationTests() {
     });
     console.log('✅ 11. WebRTC ICE Configuration received. STUN servers configured:', iceServers.data.iceServers.length);
 
-    // 12. Test Google OAuth Login
-    const googleRes = await req(`${API_URL}/auth/google`, {
+    // 12. Test Google OAuth Signup Password Requirement
+    const googleNoPass = await req(`${API_URL}/auth/google`, {
       method: 'POST',
       body: {
-        email: 'test.google.user@gmail.com',
+        email: `new.google.${Date.now()}@gmail.com`,
         displayName: 'Google Test User',
       },
     });
-    if (googleRes.ok && googleRes.data.token) {
-      console.log('✅ 12. Google Login/Signup Succeeded! User:', googleRes.data.user.username);
+    if (!googleNoPass.ok && googleNoPass.status === 400 && googleNoPass.data.isNewUser) {
+      console.log('✅ 12a. Google Signup Password Required strictly enforced! Error:', googleNoPass.data.error);
+    }
+
+    const googleWithPass = await req(`${API_URL}/auth/google`, {
+      method: 'POST',
+      body: {
+        email: `new.google.${Date.now()}@gmail.com`,
+        displayName: 'Google Test User',
+        password: 'GoogleSecurePass123!',
+      },
+    });
+    if (googleWithPass.ok && googleWithPass.data.token) {
+      console.log('✅ 12b. Google Signup with Password Succeeded! User:', googleWithPass.data.user.username);
     } else {
-      console.error('❌ Google Login failed:', googleRes.data);
+      console.error('❌ Google Signup failed:', googleWithPass.data);
     }
 
     // 13. Test Forgot Password

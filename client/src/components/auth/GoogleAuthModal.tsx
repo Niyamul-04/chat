@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { X, Mail, User, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { X, Mail, User, Lock, Eye, EyeOff, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
 
 interface GoogleAuthModalProps {
   isOpen: boolean;
@@ -11,6 +11,8 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({ isOpen, onClos
   const { googleLogin, isLoading, error, clearError } = useAuthStore();
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState('');
 
   if (!isOpen) return null;
@@ -26,9 +28,15 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({ isOpen, onClos
       return;
     }
 
+    if (!password || password.length < 6) {
+      setLocalError('Password is required and must be at least 6 characters.');
+      return;
+    }
+
     const success = await googleLogin({
       email: cleanEmail,
       displayName: displayName.trim() || cleanEmail.split('@')[0],
+      password: password.trim(),
       avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanEmail.split('@')[0]}`,
     });
 
@@ -40,9 +48,11 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({ isOpen, onClos
   const handleQuickGoogleAccount = async (presetEmail: string, presetName: string) => {
     setEmail(presetEmail);
     setDisplayName(presetName);
+    setPassword('google123456');
     const success = await googleLogin({
       email: presetEmail,
       displayName: presetName,
+      password: 'google123456',
       avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${presetEmail.split('@')[0]}`,
     });
     if (success) {
@@ -145,9 +155,36 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({ isOpen, onClos
             </div>
           </div>
 
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+              Account Password <span className="text-rose-500">*</span>
+            </label>
+            <div className="relative">
+              <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                placeholder="Set password (min 6 characters)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-slate-100 placeholder-slate-400"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">
+              Required to protect your Google account and allow password logins.
+            </p>
+          </div>
+
           <button
             type="submit"
-            disabled={isLoading || !email}
+            disabled={isLoading || !email || !password}
             className="w-full py-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 active:scale-[0.99] font-semibold text-sm shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
           >
             {isLoading ? (

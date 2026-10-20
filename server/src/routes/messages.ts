@@ -34,6 +34,7 @@ const sendMessageSchema = z.object({
   fileName: z.string().optional(),
   fileSize: z.number().optional(),
   replyToId: z.string().optional(),
+  tempId: z.string().optional(),
 });
 
 // GET /api/messages/:targetUserId - fetch paginated message history
@@ -139,7 +140,7 @@ router.post('/send', authMiddleware, async (req: AuthRequest, res): Promise<void
     }
 
     const currentUserId = req.user!.id;
-    const { receiverId, content, type, fileUrl, fileName, fileSize, replyToId } = parseResult.data;
+    const { receiverId, content, type, fileUrl, fileName, fileSize, replyToId, tempId } = parseResult.data;
 
     // Strict friendship check
     const isFriend = await verifyFriendship(currentUserId, receiverId);
@@ -185,15 +186,17 @@ router.post('/send', authMiddleware, async (req: AuthRequest, res): Promise<void
       },
     });
 
+    const messagePayload = tempId ? { ...newMessage, tempId } : newMessage;
+
     const io = getIO(res);
     if (io) {
       // Instant socket broadcast
       io.to(`user:${receiverId}`).emit('new_message', newMessage);
-      io.to(`user:${currentUserId}`).emit('message_sent', newMessage);
+      io.to(`user:${currentUserId}`).emit('message_sent', messagePayload);
     }
 
     // Immediate HTTP response (client does not wait for friendship table update)
-    res.status(201).json({ message: newMessage });
+    res.status(201).json({ message: messagePayload });
 
     // Update friendship's updatedAt asynchronously in background
     prisma.friendship.updateMany({

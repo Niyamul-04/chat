@@ -12,15 +12,10 @@ export function getSocket(): Socket {
       auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 20,
+      reconnectionAttempts: 30,
       reconnectionDelay: 500,
+      timeout: 10000,
     });
-  } else if (!socket.connected) {
-    const token = localStorage.getItem('chatsphere_token');
-    if (token) {
-      socket.auth = { token };
-    }
-    socket.connect();
   }
   return socket;
 }
@@ -29,11 +24,12 @@ export function connectSocket(token?: string): Socket {
   if (token) {
     localStorage.setItem('chatsphere_token', token);
   }
+  const currentToken = token || localStorage.getItem('chatsphere_token');
   const s = getSocket();
-  if (token) {
-    s.auth = { token };
+  if (currentToken) {
+    s.auth = { token: currentToken };
   }
-  if (!s.connected) {
+  if (s.disconnected) {
     s.connect();
   }
   return s;

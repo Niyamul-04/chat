@@ -37,6 +37,7 @@ export interface FriendItem {
 
 export interface Message {
   id: string;
+  tempId?: string;
   senderId: string;
   receiverId: string;
   content: string;

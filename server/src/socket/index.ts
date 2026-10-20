@@ -106,7 +106,7 @@ export function setupSocketIO(io: SocketIOServer) {
     // ---------------- CHAT EVENTS ----------------
     socket.on('send_message', async (data, callback) => {
       try {
-        const { receiverId, content, type = 'TEXT', fileUrl, fileName, fileSize, replyToId } = data;
+        const { receiverId, content, type = 'TEXT', fileUrl, fileName, fileSize, replyToId, tempId } = data;
 
         // SERVER-SIDE CHECK: Strict friend verification
         const isFriend = await verifyFriendship(userId, receiverId);
@@ -152,12 +152,14 @@ export function setupSocketIO(io: SocketIOServer) {
           },
         });
 
+        const messagePayload = tempId ? { ...newMessage, tempId } : newMessage;
+
         // 1. Instant socket emission to receiver and sender (zero network lag!)
         io.to(`user:${receiverId}`).emit('new_message', newMessage);
-        io.to(`user:${userId}`).emit('message_sent', newMessage);
+        io.to(`user:${userId}`).emit('message_sent', messagePayload);
 
         // 2. Immediate client callback acknowledgment
-        if (callback) callback({ success: true, message: newMessage });
+        if (callback) callback({ success: true, message: messagePayload });
 
         // 3. Update friendship's updatedAt asynchronously in background
         prisma.friendship.updateMany({
