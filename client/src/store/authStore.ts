@@ -10,7 +10,10 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   login: (username: string, password: string) => Promise<boolean>;
-  signup: (username: string, displayName: string, password: string) => Promise<boolean>;
+  signup: (username: string, displayName: string, password: string, email?: string) => Promise<boolean>;
+  googleLogin: (payload: { email: string; displayName?: string; googleId?: string; avatarUrl?: string; credential?: string }) => Promise<boolean>;
+  forgotPassword: (identifier: string) => Promise<{ success: boolean; message: string; resetCode?: string }>;
+  resetPassword: (identifier: string, resetCode: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   updateProfile: (data: { displayName?: string; bio?: string; avatarUrl?: string }) => Promise<void>;
@@ -42,10 +45,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signup: async (username, displayName, password) => {
+  signup: async (username, displayName, password, email) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await api.post('/auth/signup', { username, displayName, password });
+      const res = await api.post('/auth/signup', { username, displayName, password, email });
       const { user, token } = res.data;
       localStorage.setItem('chatsphere_token', token);
       set({ user, token, isAuthenticated: true, isLoading: false, error: null });
@@ -55,6 +58,52 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const msg = err.response?.data?.error || 'Registration failed.';
       set({ error: msg, isLoading: false });
       return false;
+    }
+  },
+
+  googleLogin: async (payload) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.post('/auth/google', payload);
+      const { user, token } = res.data;
+      localStorage.setItem('chatsphere_token', token);
+      set({ user, token, isAuthenticated: true, isLoading: false, error: null });
+      connectSocket(token);
+      return true;
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'Google login failed.';
+      set({ error: msg, isLoading: false });
+      return false;
+    }
+  },
+
+  forgotPassword: async (identifier: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.post('/auth/forgot-password', { identifier });
+      set({ isLoading: false });
+      return {
+        success: true,
+        message: res.data.message,
+        resetCode: res.data.resetCode,
+      };
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'Failed to request password reset.';
+      set({ error: msg, isLoading: false });
+      return { success: false, message: msg };
+    }
+  },
+
+  resetPassword: async (identifier: string, resetCode: string, newPassword: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.post('/auth/reset-password', { identifier, resetCode, newPassword });
+      set({ isLoading: false, error: null });
+      return { success: true, message: res.data.message };
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'Failed to reset password.';
+      set({ error: msg, isLoading: false });
+      return { success: false, message: msg };
     }
   },
 

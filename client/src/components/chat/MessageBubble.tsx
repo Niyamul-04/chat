@@ -42,15 +42,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
         isMe ? 'justify-end' : 'justify-start'
       }`}
     >
-      {/* Action Trigger for Sender/Receiver (Hover) */}
+      {/* Action Trigger for Sender/Receiver (Hover or Active) */}
       <div
-        className={`opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1 ${
+        className={`opacity-0 group-hover:opacity-100 sm:opacity-0 focus-within:opacity-100 transition-opacity flex items-center space-x-1 ${
           isMe ? 'order-first' : 'order-last'
         }`}
       >
         <button
           onClick={() => setReplyingToMessage(message)}
-          className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+          className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
           title="Reply"
         >
           <Reply className="w-3.5 h-3.5" />
@@ -59,15 +59,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
         <div className="relative">
           <button
             onClick={() => setShowMenu(!showMenu)}
-            className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
-            title="Options"
+            className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+            title="Options & Delete"
           >
             <MoreHorizontal className="w-3.5 h-3.5" />
           </button>
 
           {showMenu && (
             <div
-              className={`absolute top-full mt-1 w-36 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl z-20 text-xs ${
+              className={`absolute top-full mt-1 w-40 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl z-30 text-xs animate-fadeIn ${
                 isMe ? 'right-0' : 'left-0'
               }`}
             >
@@ -76,9 +76,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
                   deleteMessage(message.id, 'for_me');
                   setShowMenu(false);
                 }}
-                className="w-full px-3 py-1.5 text-left flex items-center space-x-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+                className="w-full px-3 py-2 text-left flex items-center space-x-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-3.5 h-3.5 text-slate-400" />
                 <span>Delete for me</span>
               </button>
               {isMe && !message.isDeleted && (
@@ -87,10 +87,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
                     deleteMessage(message.id, 'for_everyone');
                     setShowMenu(false);
                   }}
-                  className="w-full px-3 py-1.5 text-left flex items-center space-x-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
+                  className="w-full px-3 py-2 text-left flex items-center space-x-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition font-medium"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete for all</span>
+                  <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Delete for everyone</span>
                 </button>
               )}
             </div>
@@ -134,7 +134,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
           <>
             {/* Image Attachment */}
             {message.type === 'IMAGE' && message.fileUrl && (
-              <div className="mb-1.5 overflow-hidden rounded-xl cursor-pointer">
+              <div className="mb-1.5 overflow-hidden rounded-xl cursor-pointer relative group/img">
                 <img
                   src={getMediaUrl(message.fileUrl)}
                   alt={message.fileName || 'Photo'}
@@ -142,10 +142,24 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
                     setLightboxMedia({
                       url: message.fileUrl!,
                       fileName: message.fileName || undefined,
+                      messageId: message.id,
+                      isMe,
                     })
                   }
                   className="max-h-72 w-full object-cover rounded-xl hover:opacity-95 transition"
                 />
+                {/* Direct quick delete icon for images */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteMessage(message.id, isMe ? 'for_everyone' : 'for_me');
+                  }}
+                  className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/60 hover:bg-rose-600 text-white opacity-0 group-hover/img:opacity-100 transition shadow-lg backdrop-blur-xs"
+                  title={isMe ? 'Delete for everyone' : 'Delete for me'}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
             )}
 

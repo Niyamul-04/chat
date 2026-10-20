@@ -29,6 +29,7 @@ export const ActiveCallModal: React.FC = () => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
+  const remoteAudioVideoRef = useRef<HTMLVideoElement>(null);
 
   // Draggable PiP state
   const [pipPos, setPipPos] = useState({ x: 20, y: 20 });
@@ -44,20 +45,34 @@ export const ActiveCallModal: React.FC = () => {
 
   // Attach remote stream to video element (for video calls)
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
+    if (remoteVideoRef.current && remoteStream && callType === 'VIDEO') {
       remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch(() => {});
     }
-  }, [remoteStream, callState]);
+  }, [remoteStream, callState, callType]);
 
-  // Attach remote stream to audio element (crucial for audio calls so voice is heard)
+  // Attach remote stream to audio and backup media elements (guarantees voice playback)
   useEffect(() => {
-    if (remoteAudioRef.current && remoteStream) {
+    if (!remoteStream) return;
+
+    if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = remoteStream;
+      remoteAudioRef.current.muted = false;
+      remoteAudioRef.current.volume = 1.0;
       remoteAudioRef.current.play().catch((err) => {
         console.warn('Audio auto-play error:', err);
       });
     }
-  }, [remoteStream, callState]);
+
+    if (remoteAudioVideoRef.current) {
+      remoteAudioVideoRef.current.srcObject = remoteStream;
+      remoteAudioVideoRef.current.muted = false;
+      remoteAudioVideoRef.current.volume = 1.0;
+      remoteAudioVideoRef.current.play().catch((err) => {
+        console.warn('Backup audio video playback error:', err);
+      });
+    }
+  }, [remoteStream, callState, callType]);
 
   if ((callState !== 'OUTGOING' && callState !== 'CONNECTED') || !targetUser) {
     if (callError) {
@@ -106,8 +121,20 @@ export const ActiveCallModal: React.FC = () => {
       onMouseUp={handleMouseUp}
       className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-2xl flex flex-col justify-between p-6 select-none animate-fadeIn"
     >
-      {/* Hidden Audio element dedicated to playing remote audio stream for voice calls */}
-      <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
+      {/* Off-screen audio & video elements dedicated to playing remote audio stream without display:none */}
+      <audio
+        ref={remoteAudioRef}
+        autoPlay
+        playsInline
+        style={{ position: 'fixed', top: -9999, left: -9999, width: 1, height: 1, opacity: 0.01, pointerEvents: 'none' }}
+      />
+      <video
+        ref={remoteAudioVideoRef}
+        autoPlay
+        playsInline
+        muted={false}
+        style={{ position: 'fixed', top: -9999, left: -9999, width: 1, height: 1, opacity: 0.01, pointerEvents: 'none' }}
+      />
 
       {/* Top Header */}
       <div className="flex items-center justify-between text-white z-20">

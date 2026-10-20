@@ -3,6 +3,7 @@ import { User, FriendItem, FriendRequest, Message } from '../types';
 import { api } from '../services/api';
 import { getSocket } from '../services/socket';
 import { sounds } from '../services/sounds';
+import { useAuthStore } from './authStore';
 
 interface ChatState {
   friends: FriendItem[];
@@ -16,12 +17,12 @@ interface ChatState {
   sentRequests: FriendRequest[];
   activeTab: 'chats' | 'friends' | 'requests' | 'search' | 'profile';
   replyingToMessage: Message | null;
-  lightboxMedia: { url: string; fileName?: string } | null;
+  lightboxMedia: { url: string; fileName?: string; messageId?: string; isMe?: boolean } | null;
 
   setActiveFriend: (friend: User | null) => void;
   setActiveTab: (tab: 'chats' | 'friends' | 'requests' | 'search' | 'profile') => void;
   setReplyingToMessage: (msg: Message | null) => void;
-  setLightboxMedia: (media: { url: string; fileName?: string } | null) => void;
+  setLightboxMedia: (media: { url: string; fileName?: string; messageId?: string; isMe?: boolean } | null) => void;
 
   fetchFriends: () => Promise<void>;
   fetchRequests: () => Promise<void>;
@@ -138,51 +139,161 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   sendMessage: async ({ receiverId, content = '', type = 'TEXT', fileUrl, fileName, fileSize }) => {
-    const replyToId = get().replyingToMessage?.id;
-    try {
-      const res = await api.post('/messages/send', {
-        receiverId,
-        content,
-        type,
-        fileUrl,
-        fileName,
-        fileSize,
-        replyToId,
+    const replyingTo = get().replyingToMessage;
+    const replyToId = replyingTo?.id;
+    set({ replyingToMessage: null });
+
+    const currentUser = useAuthStore.getState().user;
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const nowIso = new Date().toISOString();
+
+    const optimisticMessage: Message = {
+      id: tempId,
+      senderId: currentUser?.id || 'me',
+      receiverId,
+      content,
+      type,
+      fileUrl,
+      fileName,
+      fileSize,
+      replyToId: replyToId || null,
+      replyTo: replyingTo ? {
+        id: replyingTo.id,
+        content: replyingTo.content,
+        type: replyingTo.type,
+        senderId: replyingTo.senderId,
+        sender: replyingTo.sender ? {
+          id: replyingTo.sender.id,
+          username: replyingTo.sender.username,
+          displayName: replyingTo.sender.displayName,
+        } : undefined,
+      } : null,
+      sender: currentUser ? {
+        id: currentUser.id,
+        username: currentUser.username,
+        displayName: currentUser.displayName,
+        avatarUrl: currentUser.avatarUrl,
+      } : undefined,
+      status: 'SENT',
+      isDeleted: false,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    // 1. INSTANT OPTIMISTIC DISPLAY (0ms UI latency!)
+    set((state) => {
+      const existing = state.messages[receiverId] || [];
+      const updatedFriends = state.friends.map((f) => {
+        if (f.friend.id === receiverId) {
+          return {
+            ...f,
+            lastMessage: {
+              id: tempId,
+              content,
+              type,
+              createdAt: nowIso,
+              senderId: currentUser?.id || 'me',
+              status: 'SENT',
+            },
+          };
+        }
+        return f;
       });
 
-      const message: Message = res.data.message;
-      set({ replyingToMessage: null });
+      return {
+        messages: { ...state.messages, [receiverId]: [...existing, optimisticMessage] },
+        friends: updatedFriends,
+      };
+    });
 
+    try {
+      const socket = getSocket();
+      let confirmedMessage: Message | null = null;
+
+      // Try fast WebSocket emission with ack if connected
+      if (socket && socket.connected) {
+        confirmedMessage = await new Promise<Message | null>((resolve) => {
+          const timeout = setTimeout(() => resolve(null), 2500);
+          socket.emit(
+            'send_message',
+            { receiverId, content, type, fileUrl, fileName, fileSize, replyToId },
+            (response: any) => {
+              clearTimeout(timeout);
+              if (response?.success && response?.message) {
+                resolve(response.message);
+              } else {
+                resolve(null);
+              }
+            }
+          );
+        });
+      }
+
+      // If socket ack did not complete, fallback to HTTP POST
+      if (!confirmedMessage) {
+        const res = await api.post('/messages/send', {
+          receiverId,
+          content,
+          type,
+          fileUrl,
+          fileName,
+          fileSize,
+          replyToId,
+        });
+        confirmedMessage = res.data.message;
+      }
+
+      if (confirmedMessage) {
+        const finalMsg = confirmedMessage;
+        set((state) => {
+          const existing = state.messages[receiverId] || [];
+          return {
+            messages: {
+              ...state.messages,
+              [receiverId]: existing.map((m) => (m.id === tempId ? finalMsg : m)),
+            },
+          };
+        });
+      }
+    } catch (e: any) {
+      // Revert optimistic message on failure
       set((state) => {
         const existing = state.messages[receiverId] || [];
-        // Strict deduplication: Don't append if message ID already exists
-        if (existing.some((m) => m.id === message.id)) {
-          return state;
-        }
         return {
-          messages: { ...state.messages, [receiverId]: [...existing, message] },
+          messages: {
+            ...state.messages,
+            [receiverId]: existing.filter((m) => m.id !== tempId),
+          },
         };
       });
-
-      get().fetchFriends(); // update last message and ordering
-    } catch (e: any) {
       throw new Error(e.response?.data?.error || 'Failed to send message');
     }
   },
 
   deleteMessage: async (messageId: string, mode: 'for_me' | 'for_everyone') => {
-    await api.delete(`/messages/${messageId}`, { params: { mode } });
+    // 1. Optimistic instant deletion in UI
     if (mode === 'for_everyone') {
       get().handleMessageDeleted(messageId);
     } else {
       get().handleMessageDeletedForMe(messageId);
     }
+
+    // 2. Perform API delete in background
+    try {
+      await api.delete(`/messages/${messageId}`, { params: { mode } });
+    } catch (err: any) {
+      console.error('Delete message error:', err);
+    }
   },
 
   markSeen: async (friendId: string) => {
     try {
-      await api.post(`/messages/mark-seen/${friendId}`);
-      // Update unread badges locally
+      const socket = getSocket();
+      if (socket && socket.connected) {
+        socket.emit('mark_seen', { senderId: friendId });
+      }
+      api.post(`/messages/mark-seen/${friendId}`).catch(() => {});
+      // Update unread badges locally immediately
       set((state) => ({
         friends: state.friends.map((f) => (f.friend.id === friendId ? { ...f, unreadCount: 0 } : f)),
       }));

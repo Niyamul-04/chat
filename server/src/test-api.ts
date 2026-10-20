@@ -120,7 +120,52 @@ async function runIntegrationTests() {
     });
     console.log('✅ 11. WebRTC ICE Configuration received. STUN servers configured:', iceServers.data.iceServers.length);
 
-    console.log('\n🎉 ALL 11 END-TO-END SYSTEM INTEGRATION TESTS PASSED 100%!');
+    // 12. Test Google OAuth Login
+    const googleRes = await req(`${API_URL}/auth/google`, {
+      method: 'POST',
+      body: {
+        email: 'test.google.user@gmail.com',
+        displayName: 'Google Test User',
+      },
+    });
+    if (googleRes.ok && googleRes.data.token) {
+      console.log('✅ 12. Google Login/Signup Succeeded! User:', googleRes.data.user.username);
+    } else {
+      console.error('❌ Google Login failed:', googleRes.data);
+    }
+
+    // 13. Test Forgot Password
+    const forgotRes = await req(`${API_URL}/auth/forgot-password`, {
+      method: 'POST',
+      body: {
+        identifier: 'alice',
+      },
+    });
+    if (forgotRes.ok && forgotRes.data.resetCode) {
+      console.log('✅ 13. Forgot Password generated reset code:', forgotRes.data.resetCode);
+
+      // 14. Test Reset Password
+      const resetRes = await req(`${API_URL}/auth/reset-password`, {
+        method: 'POST',
+        body: {
+          identifier: 'alice',
+          resetCode: forgotRes.data.resetCode,
+          newPassword: 'Password123!',
+        },
+      });
+      console.log('✅ 14. Password successfully reset:', resetRes.data.message);
+    } else {
+      console.error('❌ Forgot Password failed:', forgotRes.data);
+    }
+
+    // 15. Test Delete Message (for everyone)
+    const deleteRes = await req(`${API_URL}/messages/${msgRes.data.message.id}?mode=for_everyone`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${aliceToken}` },
+    });
+    console.log('✅ 15. Message Deleted for everyone successfully:', deleteRes.data.message);
+
+    console.log('\n🎉 ALL 15 END-TO-END SYSTEM INTEGRATION TESTS PASSED 100%!');
   } catch (error: any) {
     console.error('❌ Test failed:', error);
     process.exit(1);

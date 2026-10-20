@@ -56,9 +56,12 @@ class WebRTCManager {
     }
   }
 
+  private candidateQueue: RTCIceCandidateInit[] = [];
+
   createPeerConnection(targetUserId: string, onRemoteStream: (stream: MediaStream) => void): RTCPeerConnection {
     this.targetUserId = targetUserId;
     this.onRemoteStreamCallback = onRemoteStream;
+    this.candidateQueue = [];
 
     if (this.peerConnection) {
       this.peerConnection.close();
@@ -71,19 +74,27 @@ class WebRTCManager {
     // Add local tracks to peer connection
     if (this.localStream) {
       this.localStream.getTracks().forEach((track) => {
+        track.enabled = true; // explicitly ensure enabled
         pc.addTrack(track, this.localStream!);
       });
     }
 
     // Handle incoming remote stream tracks
     pc.ontrack = (event) => {
-      if (event.streams && event.streams[0]) {
-        this.remoteStream = event.streams[0];
-      } else if (event.track) {
+      let stream = event.streams && event.streams[0];
+      if (!stream) {
         if (!this.remoteStream) {
           this.remoteStream = new MediaStream();
         }
         this.remoteStream.addTrack(event.track);
+        stream = this.remoteStream;
+      } else {
+        this.remoteStream = stream;
+      }
+
+      // Explicitly ensure incoming audio tracks are unmuted and active
+      if (event.track) {
+        event.track.enabled = true;
       }
 
       if (this.remoteStream && this.onRemoteStreamCallback) {
@@ -106,12 +117,12 @@ class WebRTCManager {
     return pc;
   }
 
-  async createOffer(): Promise<void> {
+  async createOffer(callType: 'AUDIO' | 'VIDEO' = 'AUDIO'): Promise<void> {
     if (!this.peerConnection || !this.targetUserId) return;
 
     const offer = await this.peerConnection.createOffer({
       offerToReceiveAudio: true,
-      offerToReceiveVideo: true,
+      offerToReceiveVideo: callType === 'VIDEO',
     });
     await this.peerConnection.setLocalDescription(offer);
 
@@ -129,6 +140,18 @@ class WebRTCManager {
       const desc = new RTCSessionDescription(signal.sdp);
       await this.peerConnection.setRemoteDescription(desc);
 
+      // Process any buffered ICE candidates once remoteDescription is set
+      while (this.candidateQueue.length > 0) {
+        const candidate = this.candidateQueue.shift();
+        if (candidate) {
+          try {
+            await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+          } catch (candErr) {
+            console.warn('Error applying buffered ICE candidate:', candErr);
+          }
+        }
+      }
+
       if (desc.type === 'offer') {
         const answer = await this.peerConnection.createAnswer();
         await this.peerConnection.setLocalDescription(answer);
@@ -142,10 +165,15 @@ class WebRTCManager {
         }
       }
     } else if (signal.candidate) {
-      try {
-        await this.peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
-      } catch (err) {
-        console.warn('Error adding ICE candidate:', err);
+      if (this.peerConnection.remoteDescription && this.peerConnection.remoteDescription.type) {
+        try {
+          await this.peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        } catch (err) {
+          console.warn('Error adding ICE candidate:', err);
+        }
+      } else {
+        // Buffer candidate until remote description is set
+        this.candidateQueue.push(signal.candidate);
       }
     }
   }
@@ -167,6 +195,7 @@ class WebRTCManager {
   }
 
   close() {
+    this.candidateQueue = [];
     if (this.peerConnection) {
       this.peerConnection.close();
       this.peerConnection = null;

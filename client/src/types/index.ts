@@ -2,6 +2,7 @@ export interface User {
   id: string;
   username: string;
   displayName: string;
+  email?: string | null;
   avatarUrl?: string | null;
   bio?: string | null;
   status?: 'ONLINE' | 'OFFLINE';

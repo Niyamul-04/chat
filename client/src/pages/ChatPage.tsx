@@ -9,6 +9,7 @@ import { useChatStore } from '../store/chatStore';
 import { useCallStore } from '../store/callStore';
 import { getSocket } from '../services/socket';
 import { webrtc } from '../services/webrtc';
+import { sounds } from '../services/sounds';
 
 export const ChatPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -76,9 +77,11 @@ export const ChatPage: React.FC = () => {
     });
 
     socket.on('call_accepted', async () => {
-      // Caller receives acceptance from callee -> initiate WebRTC offer
+      // Caller receives acceptance from callee -> stop dial tone and initiate WebRTC offer
+      sounds.stopOutgoingDialTone();
       try {
-        await webrtc.createOffer();
+        const currentCallType = useCallStore.getState().callType;
+        await webrtc.createOffer(currentCallType);
         // Update store state
         useCallStore.setState({
           callState: 'CONNECTED',

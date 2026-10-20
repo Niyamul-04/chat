@@ -12,6 +12,10 @@ model User {
   username     String   @unique
   displayName  String
   passwordHash String
+  email        String?  @unique
+  googleId     String?  @unique
+  resetToken   String?
+  resetExpires DateTime?
   avatarUrl    String?
   bio          String?  @default("Hey there! I am using ChatSphere.")
   status       String   @default("OFFLINE") // ONLINE, OFFLINE

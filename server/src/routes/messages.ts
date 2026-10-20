@@ -1,4 +1,6 @@
 import { Router, Response } from 'express';
+import fs from 'fs';
+import path from 'path';
 import { z } from 'zod';
 import { prisma } from '../prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
@@ -230,6 +232,18 @@ router.delete('/:messageId', authMiddleware, async (req: AuthRequest, res): Prom
       if (message.senderId !== currentUserId) {
         res.status(403).json({ error: 'You can only delete your own messages for everyone.' });
         return;
+      }
+
+      if (message.fileUrl) {
+        try {
+          const filename = path.basename(message.fileUrl);
+          const filePath = path.join(__dirname, '../../uploads', filename);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        } catch (cleanupErr) {
+          console.warn('Could not remove file on delete:', cleanupErr);
+        }
       }
 
       const updated = await prisma.message.update({
